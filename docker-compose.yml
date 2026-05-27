@@ -1,0 +1,25 @@
+services:
+  linux-ssh-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: linux-ssh-mcp-server
+    restart: unless-stopped
+    ports:
+      - "8006:8006"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; s=socket.socket(); s.settimeout(2); r=s.connect_ex(('127.0.0.1',8006)); s.close(); exit(0 if r==0 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
