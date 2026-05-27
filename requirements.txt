@@ -1,0 +1,2 @@
+fastmcp==3.2.3
+paramiko==3.5.1
