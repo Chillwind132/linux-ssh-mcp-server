@@ -86,7 +86,7 @@ def register_tools(mcp: FastMCP, sm: SessionRegistry) -> None:
         """
         if sm.has_sudo_password(session_id):
             test = sm.run_sudo(session_id, "whoami", tool_name="elevate_sudo")
-            if test.get("stdout", "").strip() == "root":
+            if any(line.strip() == "root" for line in test.get("stdout", "").splitlines()):
                 return {"status": "already_elevated", "message": "Sudo is already configured and working for this session."}
 
         try:
@@ -106,7 +106,7 @@ def register_tools(mcp: FastMCP, sm: SessionRegistry) -> None:
         sm.set_sudo_password(session_id, str(password))
 
         test = sm.run_sudo(session_id, "whoami", tool_name="elevate_sudo")
-        if test.get("stdout", "").strip() == "root":
+        if any(line.strip() == "root" for line in test.get("stdout", "").splitlines()):
             return {"status": "elevated", "message": "Sudo configured successfully. Privileged commands are now available."}
         else:
             sm.set_sudo_password(session_id, None)
