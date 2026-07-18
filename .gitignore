@@ -1,5 +1,21 @@
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+
+# Virtual environments / secrets
 .env
+.venv/
+venv/
+
+# Runtime logs
 logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
