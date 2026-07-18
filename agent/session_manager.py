@@ -15,6 +15,7 @@ import paramiko
 @dataclass(frozen=True)
 class UserIdentity:
     username: str
+    password: str = ""
 
 
 current_user: contextvars.ContextVar[UserIdentity | None] = contextvars.ContextVar(
@@ -430,9 +431,13 @@ class SessionRegistry:
     """Per-user SessionManager pool.
 
     Reads the calling user's identity from the ``current_user`` context-var
-    (set by the auth middleware). AD passwords are collected through MCP
-    elicitation by the connect tool, cached in memory with an idle TTL, and
-    never accepted through HTTP headers.
+    (set by the auth middleware). The AD password is resolved flexibly:
+      * X-AD-User + X-AD-Password headers -> used as-is (no elicitation)
+      * X-AD-User only                    -> password elicited once, cached
+
+    Either way the password is cached in memory keyed by username with an idle
+    TTL and is never logged. The same header password also backs sudo
+    elevation (see ``header_password``).
     """
 
     def __init__(
@@ -452,11 +457,37 @@ class SessionRegistry:
             raise RuntimeError("No user identity in request context")
         return user.username
 
+    def header_password(self) -> str:
+        """The X-AD-Password supplied on the current request, or '' if none.
+
+        Used by the sudo-elevation tool so a header-authenticated caller is
+        elevated without a prompt.
+        """
+        user = current_user.get()
+        return user.password if user else ""
+
+    def _sync_header_password(self) -> bool:
+        """Make a header-supplied X-AD-Password authoritative for this caller.
+
+        When the request carried a password header, cache it (reusing
+        ``cache_password``'s rotation handling, which drops a stale manager if
+        the password changed) so no elicitation is needed. Returns True when a
+        header password was present.
+        """
+        password = self.header_password()
+        if not password:
+            return False
+        self.cache_password(password)
+        return True
+
     def _is_expired(self, cached: _CachedPassword, now: float) -> bool:
         ttl = self._password_idle_ttl_seconds
         return ttl > 0 and now - cached.last_used > ttl
 
     def has_cached_password(self) -> bool:
+        if self._sync_header_password():
+            return True
+
         username = self.current_username()
         expired_mgr: SessionManager | None = None
         now = time.monotonic()
@@ -498,6 +529,8 @@ class SessionRegistry:
         user = current_user.get()
         if not user:
             raise RuntimeError("No user identity in request context")
+
+        self._sync_header_password()
 
         username = user.username
         now = time.monotonic()

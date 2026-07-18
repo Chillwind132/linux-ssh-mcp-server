@@ -89,6 +89,16 @@ def register_tools(mcp: FastMCP, sm: SessionRegistry) -> None:
             if any(line.strip() == "root" for line in test.get("stdout", "").splitlines()):
                 return {"status": "already_elevated", "message": "Sudo is already configured and working for this session."}
 
+        # Header-authenticated callers reuse their X-AD-Password for sudo (no prompt).
+        header_pwd = sm.header_password()
+        if header_pwd:
+            sm.set_sudo_password(session_id, header_pwd)
+            test = sm.run_sudo(session_id, "whoami", tool_name="elevate_sudo")
+            if any(line.strip() == "root" for line in test.get("stdout", "").splitlines()):
+                return {"status": "elevated", "message": "Sudo configured successfully. Privileged commands are now available."}
+            sm.set_sudo_password(session_id, None)
+            return {"error": "Sudo authentication failed with the supplied X-AD-Password.", "details": test.get("stderr", "") or test.get("stdout", "")}
+
         try:
             result = await ctx.elicit(
                 message="Enter your sudo password to enable privileged commands.\nThe password is cached in memory for this session only and never logged.",
