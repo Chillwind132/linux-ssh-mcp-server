@@ -1,5 +1,9 @@
 # linux-ssh-mcp-server
 
+[![License: MIT](https://img.shields.io/github/license/Chillwind132/linux-ssh-mcp-server)](LICENSE)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
+
 Remote Linux operations via SSH, exposed as an MCP (Model Context Protocol) server. Connects to any Linux host using per-user AD credentials elicited at runtime — passwords live only in server memory with an idle TTL and are never logged.
 
 - **45+ tools** — filesystem, systemd services, Docker, JBoss/WildFly discovery and log search, network, certificates, firewall, and more
